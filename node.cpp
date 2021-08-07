@@ -4,7 +4,7 @@
 
 #include "node.hpp"
 #include "message.hpp"
-#include "select.h"
+#include "select.hpp"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -19,7 +19,7 @@ node::node(int port)
     this->port = port;
 }
 
-void node::setid(int id = -1)
+bool node::setid(int id = -1)
 {
     this->id = id;
     
@@ -36,17 +36,17 @@ void node::setid(int id = -1)
     if(bind(this->sock, (struct sockaddr*)&addr, sizeof(addr)) == -1)
     {
         printf("nack\n");
-        return;
+        return false;
     }
 
     if(listen(this->sock, 100) == -1)
     {
         printf("nack\n");
-        return;
+        return false;
     }
     add_fd_to_monitoring(this->sock);
     printf("ack\n");
-        return;
+    return true;
 }
 
 void node::conn(char* ip, int port)
@@ -58,17 +58,19 @@ void node::conn(char* ip, int port)
     bzero((void*)&addr, sizeof(addr));
     addr.sin_family = AF_INET;
     //change to big indian
-    addr.sin_port = htons(this->port);
+    addr.sin_port = htons(port);
     inet_pton(AF_INET, ip, (void*)&addr.sin_addr.s_addr);
-
+    add_fd_to_monitoring(sock_2);
+    cout << "connecting..." << endl;
     if(connect(sock_2, (struct sockaddr*)&addr, sizeof(addr)) == -1)
     {
         printf("nack\n");
         printf("failed to connect\n");
         return;
     }
+    cout << "finished connecting" << endl;
     message msg(this->id, 0, 0, 4, NULL, 0);
-    char buffer[512];
+    char buffer[512] = {0};
     msg.writetobuffer((void*)buffer);
     send(sock_2, (void*)buffer, 512, 0);
     int len = recv(sock_2, (void*)buffer, 512, 0);
@@ -78,12 +80,9 @@ void node::conn(char* ip, int port)
         printf("failed to recive\n");
         return;
     }
-    printf("ack\n");
     message msg_recived((void*)buffer);
     int dest_id = msg_recived.src_id;
-    cout << dest_id << endl;
     connected[dest_id] = sock_2;
-    add_fd_to_monitoring(sock_2);
 }
 
 
@@ -94,7 +93,7 @@ void node::send_(int dest_id, char* msg,size_t len)
 {
     char * p = msg;
     int packets;
-    char buffer [512];
+    char buffer [512] = {0};
     if (len%PAYLOAD_SIZE == 0)
     {
         packets = len/PAYLOAD_SIZE;
@@ -126,8 +125,14 @@ void node::peers()
 void node::ack(int fd,int msg_id,int dest_id)
 {
     message msg(this->id, dest_id, 0, 1, (char*)&msg_id, 4);
-    char buffer [512];
+    char buffer [512] = {0};
     msg.writetobuffer((void*)buffer);
-    send(fd, (void*)buffer, 512, 0);
-    
+    send(fd, (void*)buffer, 512, 0);   
+}
+void node::nack(int fd,int msg_id,int dest_id)
+{
+    message msg(this->id, dest_id, 0, 2, (char*)&msg_id, 4);
+    char buffer [512] = {0};
+    msg.writetobuffer((void*)buffer);
+    send(fd, (void*)buffer, 512, 0);   
 }

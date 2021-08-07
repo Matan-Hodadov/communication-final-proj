@@ -3,11 +3,13 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <string.h>
+#include <iostream>
 
-#include "select.h"
+#include "select.hpp"
 
 #define TRUE (1)
 #define FALSE (0)
+using namespace std;
 
 static fd_set rfds, rfds_copy;
 static int max_fd = 0;
@@ -63,4 +65,24 @@ int wait_for_input()
     }
   }
   return -1;
+}
+
+//our funcs
+void printfds()
+{
+    for (int i=0; i<alloced_fds_num; ++i)
+    {
+      //if (FD_ISSET(alloced_fds[i], &rfds))
+      cout << alloced_fds[i] << " ";
+    }
+    cout << endl;
+}
+void close_all()
+{
+    for (int i=0; i<alloced_fds_num; ++i)
+    {
+      //if (FD_ISSET(alloced_fds[i], &rfds))
+      if (alloced_fds[i]!=0)
+        close(alloced_fds[i]);
+    }
 }

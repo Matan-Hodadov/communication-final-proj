@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unordered_map>
+#include <utility>
 
 // using namespace std;
 
@@ -18,9 +19,14 @@ class node
     //id and the proper socket
     std::unordered_map<int, int> connected;
 
+    //msg id and node id
+    std::unordered_map<int, int> table;  
+
+
+
     node(int port);
 
-    void setid(int id);
+    bool setid(int id);
     void conn(char* ip, int port);
 
     //main func
@@ -28,5 +34,6 @@ class node
     // void route(int id);
     void peers();
     void ack(int fd,int msg_id,int dest_id);
+    void nack(int fd,int msg_id,int dest_id);
 
 };

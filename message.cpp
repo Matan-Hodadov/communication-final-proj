@@ -3,9 +3,11 @@
 
 #include "message.hpp"
 
+#include "iostream"
+
 using namespace std;
 
-int message::msg_counter=0;
+int message::msg_counter=1;
 
 //copy ctor
 message::message(message& msg)
@@ -15,6 +17,7 @@ message::message(message& msg)
     this->dest_id = msg.dest_id;
     this->trailing_msg = msg.trailing_msg;
     this->func_id = msg.func_id;
+    memset(this->payload,0,492);
     memcpy((void*)this->payload, (void*)msg.payload, 492);
 }
 
@@ -27,7 +30,7 @@ message::message(void* buffer)
     this->dest_id = p[2];
     this->trailing_msg = p[3];
     this->func_id = p[4];
-
+    memset(this->payload,0,492);
     memcpy((void*)this->payload, ((char*)buffer) + 20 , 492);
 
 }
@@ -42,6 +45,7 @@ message::message(int src_id, int dest_id, int trailing_msg,
     this->dest_id = dest_id;
     this->trailing_msg = trailing_msg;
     this->func_id = func_id;
+    memset(this->payload,0,492);
     if(payload_len <= 492)
     {
         memcpy(this->payload, payload, payload_len);
@@ -85,7 +89,11 @@ void message::relay(int next_node, int num_of_incoming_msg)
 
 void message::writetobuffer(void* buffer)
 {
-    bzero(buffer, 512);
+    //memset(buffer,0,512);
+    char * c = (char*)buffer;
+    for(int i = 0;i<512;i++)
+        c[i] = 0;
+
     int* p = (int*)buffer;
 
     p[0] = this->msg_id;

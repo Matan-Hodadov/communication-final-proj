@@ -12,8 +12,8 @@ message.o: message.cpp message.hpp
 main.o: main.cpp
 	g++ -g -c main.cpp
 
-select.o: select.c select.h
-	g++ -g -c select.c
+select.o: select.cpp select.hpp
+	g++ -g -c select.cpp
 
 clean:
 	rm -f *.o
