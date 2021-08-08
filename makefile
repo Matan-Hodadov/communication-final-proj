@@ -16,4 +16,4 @@ select.o: select.cpp select.hpp
 	g++ -g -c select.cpp
 
 clean:
-	rm -f *.o
+	rm -f *.o node 	

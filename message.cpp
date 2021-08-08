@@ -48,7 +48,14 @@ message::message(int src_id, int dest_id, int trailing_msg,
     memset(this->payload,0,492);
     if(payload_len <= 492)
     {
-        memcpy(this->payload, payload, payload_len);
+        if (func_id == 32)
+        {
+            int * p = (int*)this->payload;
+            *p = payload_len;
+            memcpy((void*)(p+1), payload, payload_len);
+        }
+        else
+            memcpy(this->payload, payload, payload_len);
     }
 }
 

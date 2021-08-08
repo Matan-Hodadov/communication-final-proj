@@ -23,6 +23,7 @@ int main(int argc, char** argv)
     char cmd [1024];
     bool setid_done = false;
     int fd = 0;
+
     while(1)
     {
         // printfds();
@@ -72,10 +73,13 @@ int main(int argc, char** argv)
                 if(n.connected.find(atoi(id.c_str())) == n.connected.end())
                 {                             
                     char buff [512];
+                    int msgid = message::msg_counter;
                     for (auto nei: n.connected)
                     {
                         int to = atoi(id.c_str());
                         message msg(n.id,nei.first,1,8,(char*)&to,4);
+                        msg.msg_id = msgid;
+                        message::msg_counter--;
                         msg.writetobuffer((void*)buff);
                         send(nei.second, buff, 512, 0);
                     }
@@ -143,21 +147,38 @@ int main(int argc, char** argv)
                     }
                     else
                     {
-                        n.send_(n.dest_to_next_node[msg.dest_id],(char*)all_msgs.c_str(),all_msgs.length());
+                        cout << "forward to" << n.dest_to_next_node[msg.dest_id] << " " << msg.dest_id << endl;
+                        n.send_by_id(n.dest_to_next_node[msg.dest_id],msg.dest_id,(char*)all_msgs.c_str(),all_msgs.length());
                     }
                 }
                 else
                 {
+                    // int * p = (int*)msg.payload;
+                    // for(int i =0;i<*p;i++)
+                    // {
+                    //     printf("%c",msg.payload[5+i]);
+                    // }
                     if(n.id == msg.dest_id)
                     {
-                        printf("%s\n", msg.payload);
+                        int * p = (int*)msg.payload;
+                        for(int i =0;i<*p;i++)
+                        {
+                            printf("%c",msg.payload[4+i]);
+                        }
                         cout << "checkpoint 1" << endl;
                         // discover ack
                        // n.ack(fd, msg.msg_id, msg.src_id);
                     }
                     else
                     {
-                        n.send_(n.dest_to_next_node[msg.dest_id], msg.payload, 492);
+                        //n.send_(n.dest_to_next_node[msg.dest_id], msg.payload, 492);
+                        int * p = (int*)msg.payload;
+                        for(int i =0;i<*p;i++)
+                        {
+                            printf("%c",msg.payload[4+i]);
+                        }
+                        cout << "forward to" << n.dest_to_next_node[msg.dest_id] << " " << msg.dest_id << endl;
+                        n.send_by_id(n.dest_to_next_node[msg.dest_id],msg.dest_id,msg.payload+4,*p);
                         cout << "checkpoint 2" << endl;
                     }
                 }
@@ -190,6 +211,7 @@ int main(int argc, char** argv)
                     route_payload[1] = 2;
                     route_payload[2] = n.id;
                     route_payload[3] = *p;
+                    n.dest_to_next_node[*p]=*p; //  i need to explain
                     message msg2(n.id, msg.src_id, 0, 16, (char*)route_payload, 16);
                     msg2.msg_id = msg.msg_id;
                     message::msg_counter--;
@@ -250,9 +272,9 @@ int main(int argc, char** argv)
                     send(n.connected[id_to_return_to], (void*)buffer, 512, 0);
                 }
                 else
-                {
+                {            
                     string str_payload = n.dest_to_string[final_dest];
-                    n.send_by_fd(p[1], (char*)str_payload.c_str(), str_payload.length());
+                    n.send_by_id(p[1],final_dest,(char*)str_payload.c_str(), str_payload.length());
                 }
             }
             //if(msg.func_id == )

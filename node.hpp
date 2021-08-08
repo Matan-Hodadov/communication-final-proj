@@ -48,7 +48,7 @@ class node
 
     //main func
     void send_(int dest_id, char* msg,size_t len);
-    void send_by_fd(int fd, message& msg, size_t len);
+    void send_by_id(int to,int dst_id, char * msg,int len);
 
     // void route(int id);
     void peers();

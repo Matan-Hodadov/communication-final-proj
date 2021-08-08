@@ -14,7 +14,7 @@
 #include <unordered_map>
 
 using namespace std;
-#define PAYLOAD_SIZE 492
+#define PAYLOAD_SIZE 488
 
 node::node(int port)
 {
@@ -109,15 +109,13 @@ void node::send_(int dest_id, char* msg,size_t len)
     for(int i = 0; i < packets;i++)
     {
         message m (this->id,dest_id,packets-i-1,32,p,(i == packets-1)?len%PAYLOAD_SIZE :PAYLOAD_SIZE);
-        p+=512;
+        p+=PAYLOAD_SIZE;
         m.writetobuffer(buffer);
         send(connected[dest_id],buffer,512,0);
     }
 }
-void node::send_by_fd(int fd, message& msg,size_t len)
+void node::send_by_id(int to,int dest_id, char * msg,int len)
 {
-    if(connected.find(dest_id) == connected.end())
-        return;
     char * p = msg;
     int packets;
     char buffer [512] = {0};
@@ -132,9 +130,9 @@ void node::send_by_fd(int fd, message& msg,size_t len)
     for(int i = 0; i < packets;i++)
     {
         message m (this->id,dest_id,packets-i-1,32,p,(i == packets-1)?len%PAYLOAD_SIZE :PAYLOAD_SIZE);
-        p+=512;
+        p+=PAYLOAD_SIZE;
         m.writetobuffer(buffer);
-        send(connected[dest_id],buffer,512,0);
+        send(connected[to],buffer,512,0);
     }
 }
 
