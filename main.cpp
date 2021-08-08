@@ -62,23 +62,34 @@ int main(int argc, char** argv)
                 string payloadlen = s.substr(0, s.find(","));
                 s.erase(0,s.find(",")+1);
                 string payload = s;
+
+                n.dest_to_string[atoi(id.c_str())] = payload;
                 if(atoi(payloadlen.c_str()) != payload.length()-1)
                 {
                     cout << "msg len does not match" << endl;
                     continue;
                 }
                 if(n.connected.find(atoi(id.c_str())) == n.connected.end())
-                // if(n.discover())
-                {
-                    cout << "does not connected to such a id" << endl;
-                    continue;
+                {                             
+                    char buff [512];
+                    for (auto nei: n.connected)
+                    {
+                        int to = atoi(id.c_str());
+                        message msg(n.id,nei.first,1,8,(char*)&to,4);
+                        msg.writetobuffer((void*)buff);
+                        send(nei.second, buff, 512, 0);
+                    }
                 }
-                n.send_(atoi(id.c_str()),(char*)payload.c_str(),atoi(payloadlen.c_str()));
+                // n.send_(atoi(id.c_str()),(char*)payload.c_str(),atoi(payloadlen.c_str()));
             }
-            else if(command == "exit")
+            else if(command  == "exit,")
             {
                 close_all();
                 return 0;
+            }
+            else
+            {
+                cout << "input is not valid. pls try again" << endl;
             }
         }
         else if(fd == n.sock)
@@ -101,12 +112,17 @@ int main(int argc, char** argv)
                 cout << "got connection from " << msg.src_id << endl;
                 n.ack(fd, msg.msg_id, msg.src_id);
             }
-            if(msg.func_id == 1)
+            if(msg.func_id == 1) //ack
             {
                 int* p = (int*)msg.payload;
                 cout << "ack from " << msg.src_id << " msg confirmed id is: " << *p << endl; 
             }
-            if(msg.func_id == 32)
+            if(msg.func_id == 2) //nack
+            {
+                int* p = (int*)msg.payload;
+                cout << "nack from " << msg.src_id << " msg failed id is: " << *p << endl; 
+            }
+            if(msg.func_id == 32) //send
             {
                 if(msg.trailing_msg != 0)
                 {
@@ -121,22 +137,53 @@ int main(int argc, char** argv)
                         all_msgs += msg2.payload;
                         n.ack(fd, msg2.msg_id, msg2.src_id);
                     }
-                    cout << all_msgs << endl;
+                    if(n.id == msg.dest_id)
+                    {
+                        cout << all_msgs << endl;
+                    }
+                    else
+                    {
+                        n.send_(n.dest_to_next_node[msg.dest_id],(char*)all_msgs.c_str(),all_msgs.length());
+                    }
                 }
                 else
                 {
-                    printf("%s\n", msg.payload);
-                    n.ack(fd, msg.msg_id, msg.src_id);
+                    if(n.id == msg.dest_id)
+                    {
+                        printf("%s\n", msg.payload);
+                        cout << "checkpoint 1" << endl;
+                        // discover ack
+                       // n.ack(fd, msg.msg_id, msg.src_id);
+                    }
+                    else
+                    {
+                        n.send_(n.dest_to_next_node[msg.dest_id], msg.payload, 492);
+                        cout << "checkpoint 2" << endl;
+                    }
                 }
             }
-            if(msg.func_id == 8)
+            if(msg.func_id == 8)//discovery
             {
                 int* p = (int*)msg.payload;
-                if(n.table.find(msg.msg_id) != n.table.end())
+                if(n.id_src.find(msg.msg_id) != n.id_src.end())
                 {
-                    n.nack(fd, msg.msg_id, msg.src_id);
+                    if(n.id_counter[msg.msg_id]< msg.trailing_msg)//trailinmsg is the counter in this case
+                    {
+                        n.id_counter[msg.msg_id] =  msg.trailing_msg;
+                        n.id_src[msg.msg_id] = msg.src_id;
+                    }
+                    else
+                    {
+                           n.nack(fd, msg.msg_id, msg.src_id);
+                           continue;
+                    }
                 }
-                else if(n.connected.find(*p) != n.connected.end())
+                else
+                {
+                    n.id_counter[msg.msg_id] =  msg.trailing_msg;
+                    n.id_src[msg.msg_id] = msg.src_id;
+                }
+                if(n.connected.find(*p) != n.connected.end())
                 {
                     int route_payload[4];
                     route_payload[0] = msg.msg_id;
@@ -152,14 +199,18 @@ int main(int argc, char** argv)
                 }
                 else
                 {
-                    n.table[msg.msg_id] = msg.src_id;
+                    if(n.connected.size() == 1)
+                    {
+                        n.nack(fd, msg.msg_id, msg.src_id);
+                        continue;
+                    }
                     for(auto neighbor : n.connected)
                     {
                         if(neighbor.first == msg.src_id)
                         {
                             continue;
                         }
-                        message msg2(n.id, neighbor.first, 0, 16, msg.payload, 4);
+                        message msg2(n.id, neighbor.first, msg.trailing_msg+1, 8, msg.payload, 4);
                         msg2.msg_id = msg.msg_id;
                         message::msg_counter--;
                         char buffer[512];
@@ -168,24 +219,43 @@ int main(int argc, char** argv)
                     }
                 }
             }
-            if(msg.func_id == 16)
+            if(msg.func_id == 16)//route
             {
-                int * p =(int*) msg.payload;
+                int* p = (int*)msg.payload;
+                p+=p[1] + 1;
+                int final_dest = *p;
+                n.dest_to_next_node[final_dest] = msg.src_id;
+
+                p =(int*)msg.payload;
                 p++;
-                int id_to_return_to = n.table[msg.msg_id];
-                int * new_route_payload = new int[2+ (*p) +1];
-                new_route_payload[0] = msg.msg_id;
-                new_route_payload[1] = *p+1;
-                new_route_payload[2] = n.id;
-                memcpy((void*)(new_route_payload+3),(void*)(p+1),*p);
-                message msg2 (n.id,id_to_return_to,0,16,(char*)new_route_payload,(2+ (*p) +1)*4);
-                msg2.msg_id = msg.msg_id;
-                message::msg_counter--;
-                delete new_route_payload;
-                char buffer[512];
-                msg2.writetobuffer((void*)buffer);
-                send(n.connected[id_to_return_to], (void*)buffer, 512, 0);
+                for (size_t i = 1; i <= *p; i++)
+                {
+                    cout << p[i] << " ";
+                }
+                cout << endl;
+                if(n.id_src.find(msg.msg_id) != n.id_src.end())
+                {
+                    int id_to_return_to = n.id_src[msg.msg_id];
+                    int * new_route_payload = new int[2+ (*p) +1];
+                    new_route_payload[0] = msg.msg_id;
+                    new_route_payload[1] = *p+1;
+                    new_route_payload[2] = n.id;
+                    memcpy((void*)(new_route_payload+3),(void*)(p+1),(*p)*4);
+                    message msg2 (n.id,id_to_return_to,0,16,(char*)new_route_payload,(2+ (*p) +1)*4);
+                    msg2.msg_id = msg.msg_id;
+                    message::msg_counter--;
+                    delete new_route_payload;
+                    char buffer[512];
+                    msg2.writetobuffer((void*)buffer);
+                    send(n.connected[id_to_return_to], (void*)buffer, 512, 0);
+                }
+                else
+                {
+                    string str_payload = n.dest_to_string[final_dest];
+                    n.send_by_fd(p[1], (char*)str_payload.c_str(), str_payload.length());
+                }
             }
+            //if(msg.func_id == )
         }
     }
 

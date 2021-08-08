@@ -11,6 +11,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <unordered_map>
+
 using namespace std;
 #define PAYLOAD_SIZE 492
 
@@ -91,6 +93,31 @@ void node::conn(char* ip, int port)
 
 void node::send_(int dest_id, char* msg,size_t len)
 {
+    if(connected.find(dest_id) == connected.end())
+        return;
+    char * p = msg;
+    int packets;
+    char buffer [512] = {0};
+    if (len%PAYLOAD_SIZE == 0)
+    {
+        packets = len/PAYLOAD_SIZE;
+    }
+    else
+    {
+        packets = len/PAYLOAD_SIZE + 1;
+    }
+    for(int i = 0; i < packets;i++)
+    {
+        message m (this->id,dest_id,packets-i-1,32,p,(i == packets-1)?len%PAYLOAD_SIZE :PAYLOAD_SIZE);
+        p+=512;
+        m.writetobuffer(buffer);
+        send(connected[dest_id],buffer,512,0);
+    }
+}
+void node::send_by_fd(int fd, message& msg,size_t len)
+{
+    if(connected.find(dest_id) == connected.end())
+        return;
     char * p = msg;
     int packets;
     char buffer [512] = {0};

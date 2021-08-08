@@ -1,5 +1,6 @@
 #pragma once
 
+#include "message.hpp"
 #include <stdio.h>
 #include <string.h>
 #include <unordered_map>
@@ -9,6 +10,14 @@
 
 class node
 {
+    struct pair_
+    {
+        int a, b;
+        // pair_():a(-1),b(-1){
+        pair_() = default;
+        // }
+    };
+
     public:
     int id = -1;
     int sock;
@@ -19,8 +28,16 @@ class node
     //id and the proper socket
     std::unordered_map<int, int> connected;
 
-    //msg id and node id
-    std::unordered_map<int, int> table;  
+    //key is msg id and value is node id
+    std::unordered_map<int, int> id_src;  
+
+    //key is msg id and value is counter
+    std::unordered_map<int, int>id_counter;
+
+    //key is id and value is queue of msgs
+    std::unordered_map<int , std::string> dest_to_string;
+    
+    std::unordered_map<int, int> dest_to_next_node;
 
 
 
@@ -31,6 +48,8 @@ class node
 
     //main func
     void send_(int dest_id, char* msg,size_t len);
+    void send_by_fd(int fd, message& msg, size_t len);
+
     // void route(int id);
     void peers();
     void ack(int fd,int msg_id,int dest_id);
