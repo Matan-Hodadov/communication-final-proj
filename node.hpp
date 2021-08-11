@@ -10,13 +10,6 @@
 
 class node
 {
-    struct pair_
-    {
-        int a, b;
-        // pair_():a(-1),b(-1){
-        pair_() = default;
-        // }
-    };
 
     public:
     int id = -1;
@@ -34,7 +27,7 @@ class node
     //key is msg id and value is counter
     std::unordered_map<int, int>id_counter;
 
-    //key is id and value is queue of msgs
+    //key is id and value is msg
     std::unordered_map<int , std::string> dest_to_string;
     
     std::unordered_map<int, int> dest_to_next_node;

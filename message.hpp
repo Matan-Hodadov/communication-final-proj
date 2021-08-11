@@ -24,11 +24,6 @@ class message
 
     void Ack(int msg_id, int dest_id);
     void Nack(int msg_id, int dest_id);
-    void Connect();  //maybe need to change it to return message*
-    void Discover(int id);  //maybe need to change it to return message*
-    void Route(int id, int msg_len, std::list<int> nodes);
-    void send(int msg_len, char* msg);
-    void relay(int next_node, int num_of_incoming_msg);
 
     void writetobuffer(void* buffer);
 };

@@ -26,10 +26,8 @@ int main(int argc, char** argv)
 
     while(1)
     {
-        // printfds();
         if (setid_done)
             fd = wait_for_input();
-        // cout << "chosen fd is " << fd << endl;
         if(fd == 0)
         {
             fgets(cmd,1024,stdin);
@@ -47,7 +45,6 @@ int main(int argc, char** argv)
                 ss << port_t;
                 int port;
                 ss >> port;
-                //cout << "here\n";
                 n.conn((char *)ip.c_str(),port);
             }
             else if(command == "setid")
@@ -153,11 +150,7 @@ int main(int argc, char** argv)
                 }
                 else
                 {
-                    // int * p = (int*)msg.payload;
-                    // for(int i =0;i<*p;i++)
-                    // {
-                    //     printf("%c",msg.payload[5+i]);
-                    // }
+
                     if(n.id == msg.dest_id)
                     {
                         int * p = (int*)msg.payload;
@@ -165,21 +158,12 @@ int main(int argc, char** argv)
                         {
                             printf("%c",msg.payload[4+i]);
                         }
-                        cout << "checkpoint 1" << endl;
-                        // discover ack
-                       // n.ack(fd, msg.msg_id, msg.src_id);
+
                     }
                     else
                     {
-                        //n.send_(n.dest_to_next_node[msg.dest_id], msg.payload, 492);
                         int * p = (int*)msg.payload;
-                        for(int i =0;i<*p;i++)
-                        {
-                            printf("%c",msg.payload[4+i]);
-                        }
-                        cout << "forward to" << n.dest_to_next_node[msg.dest_id] << " " << msg.dest_id << endl;
                         n.send_by_id(n.dest_to_next_node[msg.dest_id],msg.dest_id,msg.payload+4,*p);
-                        cout << "checkpoint 2" << endl;
                     }
                 }
             }
@@ -250,11 +234,12 @@ int main(int argc, char** argv)
 
                 p =(int*)msg.payload;
                 p++;
-                for (size_t i = 1; i <= *p; i++)
-                {
-                    cout << p[i] << " ";
-                }
-                cout << endl;
+                //showing the msg path for debugging prefernce
+                // for (size_t i = 1; i <= *p; i++)
+                // {
+                //     cout << p[i] << " ";
+                // }
+                // cout << endl;
                 if(n.id_src.find(msg.msg_id) != n.id_src.end())
                 {
                     int id_to_return_to = n.id_src[msg.msg_id];

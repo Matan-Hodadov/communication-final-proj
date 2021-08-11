@@ -69,31 +69,6 @@ void message::Nack(int msg_id, int dest_id)
     printf("nack");
 }
 
-void message::Connect()
-{
-
-}
-
-void message::Discover(int id)
-{
-
-}
-
-void message::Route(int id, int msg_len, std::list<int> nodes)
-{
-
-}
-
-void message::send(int msg_len, char* msg)
-{
-
-}
-
-void message::relay(int next_node, int num_of_incoming_msg)
-{
-
-}
-
 void message::writetobuffer(void* buffer)
 {
     //memset(buffer,0,512);
